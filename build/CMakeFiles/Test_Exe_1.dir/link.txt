@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/Test_Exe_1.dir/test/1.cpp.o -o Test_Exe_1

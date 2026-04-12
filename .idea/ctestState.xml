@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CidrCTestProjectState">
+    <ctestState>
+      <lineNumber testId="path:CMakeLists.txt test:Test_1" value="22" />
+      <lineNumber testId="path:CMakeLists.txt test:Test_2" value="22" />
+      <lineNumber testId="path:CMakeLists.txt test:Test_3" value="22" />
+    </ctestState>
+  </component>
+</project>

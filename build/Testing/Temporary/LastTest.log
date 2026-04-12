@@ -1,0 +1,33 @@
+Start testing: Apr 12 17:00 CST
+----------------------------------------------------------
+1/2 Testing: Test_1
+1/2 Test: Test_1
+Command: "/bin/sh" "-c" "/Users/emxy_yang/Working_dir/Project/ESet/build/Test_Exe_1 </Users/emxy_yang/Working_dir/Project/ESet/test/1.in> /Users/emxy_yang/Working_dir/Project/ESet/build/1.out && /opt/homebrew/bin/cmake -E compare_files --ignore-eol /Users/emxy_yang/Working_dir/Project/ESet/build/1.out /Users/emxy_yang/Working_dir/Project/ESet/test/1.ans"
+Directory: /Users/emxy_yang/Working_dir/Project/ESet/build
+"Test_1" start time: Apr 12 17:00 CST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"Test_1" end time: Apr 12 17:00 CST
+"Test_1" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: Test_2
+2/2 Test: Test_2
+Command: "/bin/sh" "-c" "/Users/emxy_yang/Working_dir/Project/ESet/build/Test_Exe_2 </Users/emxy_yang/Working_dir/Project/ESet/test/2.in> /Users/emxy_yang/Working_dir/Project/ESet/build/2.out && /opt/homebrew/bin/cmake -E compare_files --ignore-eol /Users/emxy_yang/Working_dir/Project/ESet/build/2.out /Users/emxy_yang/Working_dir/Project/ESet/test/2.ans"
+Directory: /Users/emxy_yang/Working_dir/Project/ESet/build
+"Test_2" start time: Apr 12 17:00 CST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.14 sec
+----------------------------------------------------------
+Test Passed.
+"Test_2" end time: Apr 12 17:00 CST
+"Test_2" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Apr 12 17:00 CST

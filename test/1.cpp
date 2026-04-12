@@ -5,8 +5,8 @@ BOOM :)
 #include<iostream>
 
 int main() {
-    freopen("1.in", "r", stdin);
-    freopen("1.out", "w", stdout);
+    //freopen("1.in", "r", stdin);
+    //freopen("1.out", "w", stdout);
 //    srand(0);
 //    clock_t start, end;
 //    start = clock();
