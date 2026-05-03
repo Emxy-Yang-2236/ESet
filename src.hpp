@@ -1,9 +1,7 @@
-#ifndef ESET_ESET_HPP
-#define ESET_ESET_HPP
-#include <cassert>
-#include <functional>
-#include <iostream>
+#pragma once
+//#include <functional>
 #include <optional>
+#include <iostream>
 #include <memory>
 
 enum class Color {
@@ -189,6 +187,91 @@ private:
         }
     }
 
+    std::shared_ptr<Node> minimum_node(std::shared_ptr<Node> node) const {
+        while (node != NIL && node->lc != NIL) node = node->lc;
+        return node;
+    }
+
+    void transplant(std::shared_ptr<Node> u, std::shared_ptr<Node> v) {
+        auto parent = u->get_parent();
+
+        if (!parent || parent == NIL) {
+            root = v;
+        } else if (parent->lc == u) {
+            parent->lc = v;
+        } else {
+            parent->rc = v;
+        }
+
+        // 注意：这里即使 v == NIL，也要把 NIL 的 parent 临时设好，
+        // 因为 fix_double_black 可能要从 NIL 往上找 parent / sibling。
+        if (v) {
+            v->parent = parent ? parent : NIL;
+        }
+    }
+
+    std::shared_ptr<Node> erase_node(std::shared_ptr<Node> z) {
+        if (!z || z == NIL) return nullptr;
+
+        auto removed = z;
+        auto y = z;
+        Color y_original_color = y->color;
+        std::shared_ptr<Node> x = NIL;
+
+        if (z->lc == NIL) {
+            x = z->rc;
+            transplant(z, z->rc);
+            update_upwards(x->get_parent());
+        }
+        else if (z->rc == NIL) {
+            x = z->lc;
+            transplant(z, z->lc);
+            update_upwards(x->get_parent());
+        }
+        else {
+            y = minimum_node(z->rc);          // 后继节点
+            y_original_color = y->color;
+            x = y->rc;                        // y 不会有左儿子
+
+            auto old_y_parent = y->get_parent();
+
+            if (old_y_parent != z) {
+                transplant(y, y->rc);
+                update_upwards(old_y_parent);
+
+                y->rc = z->rc;
+                y->rc->parent = y;
+            } else {
+                // x 可能就是 NIL，也要把 parent 指向 y
+                if (x) x->parent = y;
+            }
+
+            transplant(z, y);
+
+            y->lc = z->lc;
+            y->lc->parent = y;
+            y->color = z->color;
+            y->update();
+            update_upwards(y);
+        }
+
+        if (y_original_color == Color::BLACK) {
+            fix_double_black(x);
+        }
+
+        if (root != NIL) {
+            root->color = Color::BLACK;
+            root->parent = NIL;
+        }
+
+        // 断开 removed，避免旧节点还挂着子树
+        removed->lc = nullptr;
+        removed->rc = nullptr;
+        removed->parent.reset();
+
+        return removed;
+    }
+/*
     void fix_double_black(std::shared_ptr<Node> node) {
         if (node == NIL || node == root) return;
         if (node->color == Color::RED) {
@@ -243,7 +326,98 @@ private:
                 }
             }
         }
+    }*/
+
+    void fix_double_black(std::shared_ptr<Node> node) {
+    if (node == root) return;
+
+    auto parent = node ? node->get_parent() : nullptr;
+    if (!parent || parent == NIL) return;
+
+    if (node != NIL && node->color == Color::RED) {
+        node->color = Color::BLACK;
+        return;
     }
+
+    auto sibling = (parent->lc == node ? parent->rc : parent->lc);
+
+    // 兄弟不存在（即兄弟是 NIL），双黑上推
+    if (sibling == NIL) {
+        fix_double_black(parent);
+        return;
+    }
+
+    // Case 1: 兄弟红
+    if (sibling->color == Color::RED) {
+        sibling->color = Color::BLACK;
+        parent->color = Color::RED;
+
+        if (parent->lc == node) {
+            rotate_left(parent);
+        } else {
+            rotate_right(parent);
+        }
+
+        sibling = (parent->lc == node ? parent->rc : parent->lc);
+    }
+
+    bool sibling_left_black  = (sibling->lc == NIL || sibling->lc->color == Color::BLACK);
+    bool sibling_right_black = (sibling->rc == NIL || sibling->rc->color == Color::BLACK);
+
+    // Case 2: 兄弟黑，且兄弟两个孩子都黑
+    if (sibling_left_black && sibling_right_black) {
+        sibling->color = Color::RED;
+        if (parent->color == Color::RED) {
+            parent->color = Color::BLACK;
+        } else {
+            fix_double_black(parent);
+        }
+        return;
+    }
+
+    // Case 3/4: 兄弟黑，且至少一个红孩子
+    if (parent->lc == node) {
+        // node 是左孩子，sibling 是右孩子：看 RR / RL
+        if (sibling->rc != NIL && sibling->rc->color == Color::RED) {
+            // RR
+            sibling->color = parent->color;
+            parent->color = Color::BLACK;
+            sibling->rc->color = Color::BLACK;
+            rotate_left(parent);
+        } else {
+            // RL
+            if (sibling->lc != NIL) sibling->lc->color = Color::BLACK;
+            sibling->color = Color::RED;
+            rotate_right(sibling);
+
+            sibling = parent->rc;
+            sibling->color = parent->color;
+            parent->color = Color::BLACK;
+            if (sibling->rc != NIL) sibling->rc->color = Color::BLACK;
+            rotate_left(parent);
+        }
+    } else {
+        // node 是右孩子，sibling 是左孩子：看 LL / LR
+        if (sibling->lc != NIL && sibling->lc->color == Color::RED) {
+            // LL
+            sibling->color = parent->color;
+            parent->color = Color::BLACK;
+            sibling->lc->color = Color::BLACK;
+            rotate_right(parent);
+        } else {
+            // LR
+            if (sibling->rc != NIL) sibling->rc->color = Color::BLACK;
+            sibling->color = Color::RED;
+            rotate_left(sibling);
+
+            sibling = parent->lc;
+            sibling->color = parent->color;
+            parent->color = Color::BLACK;
+            if (sibling->lc != NIL) sibling->lc->color = Color::BLACK;
+            rotate_right(parent);
+        }
+    }
+}
 
     void update_upwards(std::shared_ptr<Node> curr) {
         while (curr && curr != NIL) {
@@ -253,53 +427,9 @@ private:
     }
 
     std::shared_ptr<Node> remove_in(std::shared_ptr<Node> &node, std::shared_ptr<Node> &p, Key val) {
-        if (!node || node == NIL) return nullptr;
-        std::shared_ptr<Node> res = nullptr;
-
-        if (compare_(node->data.value(), val)) {
-            res =  remove_in(node->rc, node, val);
-        }else if (compare_(val, node->data.value())){
-            res =  remove_in(node->lc, node, val);
-        }else {
-                if (node->rc == NIL && node->lc == NIL) {
-                    std::shared_ptr<Node> curr = node;
-                    //auto parent_to_update = node->get_parent();
-                    if (node->color == Color::RED) {
-                        curr->size = 0;
-                        update_upwards(curr->get_parent());
-                        node = NIL;
-                        res = NIL;
-                    }else {
-                        fix_double_black(curr);
-                        // 通过 curr 自己找回真实的父亲，切断联系
-                        auto real_parent = curr->get_parent();
-                        if (real_parent) {
-                            if (real_parent->lc == curr) real_parent->lc = NIL;
-                            else real_parent->rc = NIL;
-                        } else {
-                            root = NIL; // 如果它是根节点
-                        }
-                        res = NIL;
-                        update_upwards(real_parent);
-                    }
-
-                }else if (node->rc == NIL || node->lc == NIL) {
-                    auto parent = node->get_parent();
-                    node = std::move(node->rc == NIL ? node->lc : node->rc);
-                    if (node && node != NIL) node->parent = parent;
-                    node->color = Color::BLACK;
-                    res = node;
-                    update_upwards(parent);
-                }else {
-                    auto successor = node->rc;
-                    while (successor->lc != NIL) successor = successor->lc;
-
-                    node->data = successor->data;
-                    res = remove_in(node->rc, node, node->data.value());
-                }
-        }
-
-        return res;
+        auto target = search_in(root, val);
+        if (target == NIL) return nullptr;
+        return erase_node(target);
     }
 
     std::shared_ptr<Node> search_in(std::shared_ptr<Node> node, const Key &val) const{
@@ -488,8 +618,10 @@ public:
 
     std::pair<iterator,bool> insert(Key val) {
         auto new_node = insert_in(root, NIL, val);
-        insert_fix(new_node.first);
-        root->color = Color::BLACK;
+        if (new_node.second) {
+            insert_fix(new_node.first);
+            root->color = Color::BLACK;
+        }
         return {iterator(new_node.first, this),new_node.second};
     }
     template< class... Args >
@@ -534,8 +666,9 @@ public:
         return n->lc && n->lc != NIL;
     }
 
-
-    ESet(const ESet& other) : ESet() {
+    ESet(const ESet& other) : compare_(other.compare_) {
+        init_NIL();
+        root = NIL;
         for (const auto& item : other) {
             this->insert(item);
         }
@@ -544,6 +677,8 @@ public:
     ESet& operator=(const ESet& other) {
         if (this != &other) {
             this->clear();
+            compare_ = other.compare_;
+            root = NIL;
             for (const auto& item : other) {
                 this->insert(item);
             }
@@ -551,19 +686,24 @@ public:
         return *this;
     }
 
+
     ESet(ESet&& other) noexcept
-    : root(std::move(other.root)), NIL(std::move(other.NIL)) {
+    : compare_(std::move(other.compare_)),
+      root(std::move(other.root)),
+      NIL(std::move(other.NIL)) {
         other.init_NIL();
         other.root = other.NIL;
     }
 
+
     ESet& operator=(ESet&& other) noexcept {
         if (this != &other) {
             this->clear();
+            compare_ = std::move(other.compare_);
             this->root = std::move(other.root);
             this->NIL = std::move(other.NIL);
             other.init_NIL();
-            other.root = NIL;
+            other.root = other.NIL;
         }
         return *this;
     }
@@ -603,35 +743,9 @@ public:
         return iterator(res, this);
     }
 
-    int count_real(std::shared_ptr<Node> n, const Key& l, const Key& r) const {   //debug
-        if (n == NIL) return 0;
-        int cnt = 0;
-        if (!compare_(n->data.value(), l) && !compare_(r, n->data.value())) cnt = 1; // l <= val <= r
-        return cnt + count_real(n->lc, l, r) + count_real(n->rc, l, r);
-    }
-    void check_entire_tree(std::shared_ptr<Node> n) const {
-        if (n == NIL) return;
-        int expected = (n->lc != NIL ? n->lc->size : 0) + (n->rc != NIL ? n->rc->size : 0) + 1;
-        if (n->size != expected) {
-            std::cerr << "发现僵尸节点,值: " << n->data.value()
-                      << " 记录 size: " << n->size << " 实际应为: " << expected << std::endl;
-            abort();
-        }
-        check_entire_tree(n->lc);
-        check_entire_tree(n->rc);
-    }
-
     size_t range( const Key& l, const Key& r ) const {
         //check_entire_tree(root);
         if (compare_(r, l)) return 0;
         return get_rank_in(root, r) - get_rank_less_than(root, l);
-        size_t fast = get_rank_in(root, r) - get_rank_less_than(root, l);  //debug
-        size_t slow = count_real(root, l, r);
-        if (fast != slow) {
-            std::cerr << "Size Inconsistency Detected!" <<fast<<" vs "<<slow<< std::endl;
-        }
-        return fast;
     }
-
 };
-#endif //ESET_ESET_HPP
